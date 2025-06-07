@@ -25,7 +25,12 @@ class User extends Model {
         }
         
         $data['password'] = hash('sha256', $data['password']);
-        $data['role'] = 'user';
+        
+        // Set default role only if role is not already set
+        if (!isset($data['role']) || empty($data['role'])) {
+            $data['role'] = 'user';
+        }
+        
         return $this->create($data);
     }
     
