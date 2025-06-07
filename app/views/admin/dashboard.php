@@ -61,29 +61,13 @@ require_once APP_PATH . '/views/layouts/header.php';
                 </div>
             </div>
         </a>
-
-        <!-- <a href="/auth/logout" class="group">
-            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
-                <div class="flex items-center">
-                    <div class="p-3 bg-red-100 rounded-lg">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Sign Out</h3>
-                        <p class="text-sm text-gray-600">Sign out from the admin panel</p>
-                    </div>
-                </div>
-            </div>
-        </a> -->
     </div>
 
     <!-- Latest News -->
     <div class="bg-white rounded-xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-gray-900">Latest News</h2>
-            <!-- <a href="/admin/news-list" class="text-blue-600 hover:text-blue-800 font-medium">View All →</a> -->
+            <a href="/admin/news-list" class="text-blue-600 hover:text-blue-800 font-medium">View All →</a>
         </div>
         
         <?php if (!empty($latestNews)): ?>
@@ -92,29 +76,70 @@ require_once APP_PATH . '/views/layouts/header.php';
                     <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div class="flex items-center mb-2">
                             <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                <!-- <?= htmlspecialchars($article['category']) ?> -->
                                 <?= htmlspecialchars($article['categoryName'] ?? 'No Category') ?>
                             </span>
                             <span class="text-gray-500 text-xs ml-auto">
-                                <?= date('M j', strtotime($article['release_date'])) ?>
+                                <?= date('M j, Y', strtotime($article['release_date'])) ?>
                             </span>
                         </div>
+                        
+                        <!-- Enhanced Time Display -->
+                        <div class="flex items-center text-xs text-gray-500 mb-3">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="mr-3">
+                                Created: <?= date('g:i A', strtotime($article['created_at'])) ?>
+                            </span>
+                            <?php if ($article['created_at'] !== $article['release_date']): ?>
+                                <span class="text-green-600">
+                                    <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Published: <?= date('M j, g:i A', strtotime($article['release_date'])) ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        
                         <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2">
                             <?= htmlspecialchars($article['title']) ?>
                         </h3>
                         <p class="text-gray-600 text-sm line-clamp-2 mb-3">
                             <?= htmlspecialchars(substr($article['content'], 0, 100)) ?>...
                         </p>
-                        <!-- <div class="flex space-x-2">
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex space-x-2 mt-3">
                             <a href="/admin/edit-news?id=<?= $article['id'] ?>" 
-                               class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
+                               class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors">
+                                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
                                 Edit
                             </a>
                             <a href="/news/<?= $article['id'] ?>" 
-                               class="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                               class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors">
+                                <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
                                 View
                             </a>
-                        </div> -->
+                            
+                            <!-- Time Since Published -->
+                            <div class="text-xs text-gray-400 flex items-center ml-auto">
+                                <?php 
+                                $timeAgo = time() - strtotime($article['created_at']);
+                                if ($timeAgo < 3600) {
+                                    echo floor($timeAgo / 60) . 'm ago';
+                                } elseif ($timeAgo < 86400) {
+                                    echo floor($timeAgo / 3600) . 'h ago';
+                                } else {
+                                    echo floor($timeAgo / 86400) . 'd ago';
+                                }
+                                ?>
+                            </div>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
