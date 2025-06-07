@@ -1,40 +1,70 @@
 <?php
-require_once APP_PATH . '/core/Model.php';
+require_once APP_PATH . '/core/model.php';
 
 class Category extends Model {
     protected $table = 'categories';
     
-    public function getAllCategories() {
+    // Get all categories
+    public function findAll() {
         $stmt = $this->db->prepare("SELECT * FROM {$this->table} ORDER BY name ASC");
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    public function getCategoryNames() {
-        $stmt = $this->db->prepare("SELECT name FROM {$this->table} ORDER BY name ASC");
-        $stmt->execute();
-        return array_column($stmt->fetchAll(), 'name');
+    // Find category by ID
+    public function findById($id) {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    public function addCategory($name) {
-        $stmt = $this->db->prepare("INSERT INTO {$this->table} (name) VALUES (?)");
-        return $stmt->execute([trim($name)]);
+    // Create new category
+    public function create($data) {
+        $stmt = $this->db->prepare("
+            INSERT INTO {$this->table} (name) 
+            VALUES (?)
+        ");
+        return $stmt->execute([$data['name']]);
     }
     
-    public function updateCategory($id, $name) {
-        $stmt = $this->db->prepare("UPDATE {$this->table} SET name = ? WHERE id = ?");
-        return $stmt->execute([trim($name), $id]);
+    // Update category
+    public function update($id, $data) {
+        $stmt = $this->db->prepare("
+            UPDATE {$this->table} 
+            SET name = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ");
+        return $stmt->execute([$data['name'], $id]);
     }
     
-    public function categoryExists($name) {
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE name = ?");
-        $stmt->execute([trim($name)]);
-        return $stmt->fetchColumn() > 0;
+    // Delete category
+    public function delete($id) {
+        // Check if category is being used by any news
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM news WHERE category_id = ?");
+        $stmt->execute([$id]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result['count'] > 0) {
+            return ['success' => false, 'message' => 'Cannot delete category. It is being used by ' . $result['count'] . ' news articles.'];
+        }
+        
+        $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE id = ?");
+        $success = $stmt->execute([$id]);
+        
+        return ['success' => $success, 'message' => $success ? 'Category deleted successfully.' : 'Failed to delete category.'];
     }
-
-    public function categoryExistsExcluding($name, $excludeId) {
-        $stmt = $this->db->prepare("SELECT COUNT(*) FROM categories WHERE name = ? AND id != ?");
-        $stmt->execute([$name, $excludeId]);
-        return $stmt->fetchColumn() > 0;
+    
+    // Check if category name exists (for validation)
+    public function nameExists($name, $excludeId = null) {
+        if ($excludeId) {
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM {$this->table} WHERE name = ? AND id != ?");
+            $stmt->execute([$name, $excludeId]);
+        } else {
+            $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM {$this->table} WHERE name = ?");
+            $stmt->execute([$name]);
+        }
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['count'] > 0;
     }
 }
