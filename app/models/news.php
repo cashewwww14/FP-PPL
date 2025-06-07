@@ -4,18 +4,16 @@ require_once APP_PATH . '/core/model.php';
 class News extends Model {
     protected $table = 'news';
     
-    // Method baru untuk dashboard dengan kategori (PENTING!)
+    // Method untuk dashboard dengan kategori
     public function getLatestWithCategory($limit = 10) {
         $limit = intval($limit);
         if ($limit <= 0) $limit = 10;
         if ($limit > 100) $limit = 100;
         
-        $sql = "SELECT n.*, 
-                       c.name as categoryName,
-                       c.id as categoryId
-                FROM {$this->table} n 
-                LEFT JOIN categories c ON n.category_id = c.id 
-                ORDER BY n.release_date DESC 
+        $sql = "SELECT news.*, categories.name as categoryName, categories.id as categoryId
+                FROM {$this->table} news
+                LEFT JOIN categories ON news.category_id = categories.id
+                ORDER BY news.release_date DESC 
                 LIMIT " . $limit;
         
         $stmt = $this->db->prepare($sql);
@@ -26,12 +24,10 @@ class News extends Model {
     // Method untuk list semua news dengan kategori
     public function findAllWithCategory() {
         $stmt = $this->db->prepare("
-            SELECT n.*, 
-                   c.name as categoryName,
-                   c.id as categoryId
-            FROM {$this->table} n 
-            LEFT JOIN categories c ON n.category_id = c.id 
-            ORDER BY n.release_date DESC
+            SELECT news.*, categories.name as categoryName, categories.id as categoryId
+            FROM {$this->table} news
+            LEFT JOIN categories ON news.category_id = categories.id
+            ORDER BY news.release_date DESC
         ");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -40,44 +36,38 @@ class News extends Model {
     // Method untuk edit news dengan kategori
     public function findByIdWithCategory($id) {
         $stmt = $this->db->prepare("
-            SELECT n.*, 
-                   c.name as categoryName,
-                   c.id as categoryId
-            FROM {$this->table} n 
-            LEFT JOIN categories c ON n.category_id = c.id 
-            WHERE n.id = ?
+            SELECT news.*, categories.name as categoryName, categories.id as categoryId
+            FROM {$this->table} news
+            LEFT JOIN categories ON news.category_id = categories.id
+            WHERE news.id = ?
         ");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    // Update method untuk foreign key
+    // Update method untuk kategori ID
     public function findByCategory($categoryId) {
         $stmt = $this->db->prepare("
-            SELECT n.*, 
-                   c.name as categoryName,
-                   c.id as categoryId
-            FROM {$this->table} n 
-            LEFT JOIN categories c ON n.category_id = c.id 
-            WHERE n.category_id = ? 
-            ORDER BY n.release_date DESC
+            SELECT news.*, categories.name as categoryName, categories.id as categoryId
+            FROM {$this->table} news
+            LEFT JOIN categories ON news.category_id = categories.id
+            WHERE news.category_id = ? 
+            ORDER BY news.release_date DESC
         ");
         $stmt->execute([$categoryId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Update search dengan JOIN
+    // Enhanced search method - mencari dari judul DAN isi content
     public function search($query) {
         $stmt = $this->db->prepare("
-            SELECT n.*, 
-                   c.name as categoryName,
-                   c.id as categoryId
-            FROM {$this->table} n 
-            LEFT JOIN categories c ON n.category_id = c.id 
-            WHERE n.title LIKE ? 
-            ORDER BY n.release_date DESC
+            SELECT news.*, categories.name as categoryName, categories.id as categoryId
+            FROM {$this->table} news
+            LEFT JOIN categories ON news.category_id = categories.id
+            WHERE news.title LIKE ? OR news.content LIKE ?
+            ORDER BY news.release_date DESC
         ");
-        $stmt->execute(["%{$query}%"]);
+        $stmt->execute(["%{$query}%", "%{$query}%"]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
@@ -93,23 +83,22 @@ class News extends Model {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Update filterNews untuk foreign key
+    // Enhanced filterNews untuk kategori ID dengan search di judul DAN content
     public function filterNews($categoryId = null, $search = null) {
-        $sql = "SELECT n.*, 
-                       c.name as categoryName,
-                       c.id as categoryId
-                FROM {$this->table} n 
-                LEFT JOIN categories c ON n.category_id = c.id";
+        $sql = "SELECT news.*, categories.name as categoryName, categories.id as categoryId
+                FROM {$this->table} news
+                LEFT JOIN categories ON news.category_id = categories.id";
         $params = [];
         $conditions = [];
         
         if ($categoryId) {
-            $conditions[] = "n.category_id = ?";
+            $conditions[] = "news.category_id = ?";
             $params[] = $categoryId;
         }
         
         if ($search) {
-            $conditions[] = "n.title LIKE ?";
+            $conditions[] = "(news.title LIKE ? OR news.content LIKE ?)";
+            $params[] = "%{$search}%";
             $params[] = "%{$search}%";
         }
         
@@ -117,20 +106,20 @@ class News extends Model {
             $sql .= " WHERE " . implode(' AND ', $conditions);
         }
         
-        $sql .= " ORDER BY n.release_date DESC";
+        $sql .= " ORDER BY news.release_date DESC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Update getCategories untuk mengambil dari database
+    // Get categories dari tabel categories
     public function getCategories() {
-        $stmt = $this->db->prepare("SELECT name FROM categories ORDER BY name");
+        $stmt = $this->db->prepare("SELECT id, name FROM categories ORDER BY name");
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+
     // Method untuk create dengan category_id
     public function create($data) {
         $stmt = $this->db->prepare("
