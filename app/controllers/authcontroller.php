@@ -11,13 +11,6 @@ class AuthController extends Controller {
     
     public function login() {
         // Redirect if already logged in
-        // if (isset($_SESSION['user_id'])) {
-        //     if ($_SESSION['role'] === 'admin') {
-        //         $this->redirect('/admin/dashboard');
-        //     } else {
-        //         $this->redirect('/');
-        //     }
-        // }
         if (isset($_SESSION['user_id'])) {
             $this->redirect('/');  // Semua role ke homepage
         }
@@ -33,23 +26,13 @@ class AuthController extends Controller {
             } else {
                 $user = $this->userModel->authenticate($email, $password);
                 
-                // if ($user) {
-                //     $_SESSION['user_id'] = $user['id'];
-                //     $_SESSION['role'] = $user['role'];
-                    
-                //     if ($user['role'] === 'admin') {
-                //         $this->redirect('/admin/dashboard');
-                //     } else {
-                //         $this->redirect('/');
-                //     }
-                // } else {
-                //     $error = "Invalid email or password!";
-                // }
                 if ($user) {
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['role'] = $user['role'];
                     
                     $this->redirect('/');  // Semua role ke homepage
+                } else {
+                    $error = "Invalid email or password!";
                 }
             }
         }
@@ -84,6 +67,13 @@ class AuthController extends Controller {
             } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 $error = "Invalid email format!";
             } else {
+                // Check if email ends with @nextc.id to assign admin role
+                if (str_ends_with(strtolower($data['email']), '@nextc.id')) {
+                    $data['role'] = 'admin';
+                } else {
+                    $data['role'] = 'user'; // Default role for other emails
+                }
+                
                 if ($this->userModel->register($data)) {
                     $this->redirect('/auth/login?registered=1');
                 } else {
