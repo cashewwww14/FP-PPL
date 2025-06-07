@@ -8,6 +8,10 @@ class AdminController extends Controller {
     private $categoryModel;
     
     public function __construct() {
+        // Start session if not already started
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
         $this->newsModel = new News();
         $this->categoryModel = new Category();
     }
@@ -19,134 +23,205 @@ class AdminController extends Controller {
         $latestNews = $this->newsModel->getLatestWithCategory(9);
         $this->view('admin/dashboard', ['latestNews' => $latestNews]);
     }
-    
+
     public function newsList() {
+        $this->requireAuth();
         $this->requireAdmin();
         
-        // Update: Dapatkan semua news dengan kategori
-        $news = $this->newsModel->findAllWithCategory();
-        $this->view('admin/list_news', ['news' => $news]);
-    }
-    
-    public function addNews() {
-        $this->requireAdmin();
+        // Get search and filter parameters
+        $search = $_GET['search'] ?? '';
+        $categoryId = $_GET['category'] ?? '';
         
-        // Handle AJAX requests for category management
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-            header('Content-Type: application/json');
-            
-            switch ($_POST['action']) {
-                case 'add_category':
-                    $this->handleAddCategory();
-                    break;
-                case 'edit_category':
-                    $this->handleEditCategory();
-                    break;
-            }
-            exit;
+        // Fetch news based on filters
+        if (!empty($search) || !empty($categoryId)) {
+            $news = $this->newsModel->filterNews($categoryId, $search);
+        } else {
+            $news = $this->newsModel->findAllWithCategory();
         }
         
-        // Handle GET request for categories
-        if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_categories') {
-            $this->getCategoriesAjax();
-            exit;
+        // Get all categories for filter dropdown
+        $categories = $this->categoryModel->findAll();
+        
+        // Check for success message
+        $successMessage = null;
+        if (isset($_SESSION['success_message'])) {
+            $successMessage = $_SESSION['success_message'];
+            unset($_SESSION['success_message']);
         }
         
-        $error = null;
-        $categoriesFromDB = $this->categoryModel->getAllCategories();
-        $categories = array_column($categoriesFromDB, 'name'); // For backward compatibility
-        
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
-            $data = [
-                'title' => $_POST['title'] ?? '',
-                'content' => $_POST['content'] ?? '',
-                'release_date' => $_POST['release_date'] ?? '',
-                'category_id' => $_POST['category_id'] ?? '' // Updated from 'category'
-            ];
-            
-            // Validation
-            if (empty($data['title']) || empty($data['content']) || empty($data['release_date']) || empty($data['category_id'])) {
-                $error = "All fields are required!";
-            } else {
-                // Handle file upload
-                if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-                    $uploadResult = $this->handleImageUpload($_FILES['image']);
-                    if ($uploadResult['success']) {
-                        $data['image'] = $uploadResult['path'];
-                    } else {
-                        $error = $uploadResult['error'];
-                    }
-                } else {
-                    $error = "Please select an image to upload.";
-                }
-                
-                if (!$error && $this->newsModel->create($data)) {
-                    $this->redirect('/admin/dashboard');
-                } elseif (!$error) {
-                    $error = "Failed to create news article.";
-                }
-            }
-        }
-        
-        $this->view('admin/add_news', [
-            'error' => $error, 
+        $this->view('admin/list_news', [
+            'news' => $news,
             'categories' => $categories,
-            'categoriesFromDB' => $categoriesFromDB
+            'successMessage' => $successMessage
         ]);
     }
     
+    public function addNews() {
+        $this->requireAuth();
+        $this->requireAdmin();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Handle form submission
+            $title = $_POST['title'] ?? '';
+            $content = $_POST['content'] ?? '';
+            $category_id = $_POST['category_id'] ?? '';
+            $release_date = $_POST['release_date'] ?? '';
+            
+            // Validation
+            if (empty($title) || empty($content) || empty($category_id) || empty($release_date)) {
+                $error = "All fields are required.";
+            } else {
+                // Handle file upload
+                $image_path = '';
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    // FIXED: Correct upload directory
+                    $upload_dir = dirname(APP_PATH) . '/public/assets/news/';
+                    
+                    // Create uploads directory if it doesn't exist
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0755, true);
+                    }
+                    
+                    $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+                    
+                    if (in_array($file_extension, $allowed_extensions)) {
+                        $new_filename = uniqid() . '.' . $file_extension;
+                        $target_path = $upload_dir . $new_filename;
+                        
+                        if (move_uploaded_file($_FILES['image']['tmp_name'], $target_path)) {
+                            // FIXED: Store relative path for database
+                            $image_path = 'assets/news/' . $new_filename;
+                        } else {
+                            $error = "Failed to upload image.";
+                        }
+                    } else {
+                        $error = "Invalid image format. Please use JPG, JPEG, PNG, or GIF.";
+                    }
+                } else {
+                    $error = "Please select an image file.";
+                }
+                
+                // Save to database if no errors
+                if (!isset($error)) {
+                    $data = [
+                        'title' => $title,
+                        'content' => $content,
+                        'category_id' => $category_id,
+                        'release_date' => $release_date,
+                        'image' => $image_path
+                    ];
+                    
+                    if ($this->newsModel->create($data)) {
+                        $_SESSION['success_message'] = "News article created successfully!";
+                        $this->redirect('/admin/news-list');
+                    } else {
+                        $error = "Failed to create news article.";
+                    }
+                }
+            }
+            
+            // If there's an error, show form again with error message
+            $categories = $this->categoryModel->findAll();
+            $this->view('admin/add_news', [
+                'error' => $error ?? null,
+                'categories' => $categories
+            ]);
+            
+        } else {
+            // Show form
+            $categories = $this->categoryModel->findAll();
+            $this->view('admin/add_news', [
+                'categories' => $categories
+            ]);
+        }
+    }
+
     public function editNews() {
+        $this->requireAuth();
         $this->requireAdmin();
         
         $id = $_GET['id'] ?? null;
+        
         if (!$id || !is_numeric($id)) {
-            $this->redirect('/admin/list-news');
+            $this->redirect('/admin/news-list');
         }
         
         $news = $this->newsModel->findByIdWithCategory($id);
+        
         if (!$news) {
-            $this->redirect('/admin/list-news');
+            $this->redirect('/admin/news-list');
         }
         
-        $error = null;
-        $categoriesFromDB = $this->categoryModel->getAllCategories();
-        $categories = array_column($categoriesFromDB, 'name');
-        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'title' => $_POST['title'] ?? '',
-                'content' => $_POST['content'] ?? '',
-                'release_date' => $_POST['release_date'] ?? '',
-                'category_id' => $_POST['category_id'] ?? '' // Updated from 'category'
-            ];
+            // Handle form submission
+            $title = $_POST['title'] ?? '';
+            $content = $_POST['content'] ?? '';
+            $category_id = $_POST['category_id'] ?? '';
+            $release_date = $_POST['release_date'] ?? '';
             
             // Validation
-            if (empty($data['title']) || empty($data['content']) || empty($data['release_date']) || empty($data['category_id'])) {
-                $error = "All fields are required!";
+            if (empty($title) || empty($content) || empty($category_id) || empty($release_date)) {
+                $error = "All fields are required.";
             } else {
+                $data = [
+                    'title' => $title,
+                    'content' => $content,
+                    'category_id' => $category_id,
+                    'release_date' => $release_date
+                ];
+                
                 // Handle file upload if new image is provided
-                if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-                    $uploadResult = $this->handleImageUpload($_FILES['image']);
-                    if ($uploadResult['success']) {
-                        $data['image'] = $uploadResult['path'];
+                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    // FIXED: Correct upload directory
+                    $upload_dir = dirname(APP_PATH) . '/public/assets/news/';
+                    
+                    // Create uploads directory if it doesn't exist
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0755, true);
+                    }
+                    
+                    $file_extension = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+                    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+                    
+                    if (in_array($file_extension, $allowed_extensions)) {
+                        $new_filename = uniqid() . '.' . $file_extension;
+                        $target_path = $upload_dir . $new_filename;
+                        
+                        if (move_uploaded_file($_FILES['image']['tmp_name'], $target_path)) {
+                            // FIXED: Delete old image with correct path
+                            if (!empty($news['image']) && file_exists(dirname(APP_PATH) . '/' . $news['image'])) {
+                                unlink(dirname(APP_PATH) . '/' . $news['image']);
+                            }
+                            
+                            // FIXED: Store relative path for database
+                            $data['image'] = 'assets/news/' . $new_filename;
+                        } else {
+                            $error = "Failed to upload image.";
+                        }
                     } else {
-                        $error = $uploadResult['error'];
+                        $error = "Invalid image format. Please use JPG, JPEG, PNG, or GIF.";
                     }
                 }
                 
-                if (!$error && $this->newsModel->update($id, $data)) {
-                    $this->redirect('/admin/list-news');
-                } elseif (!$error) {
-                    $error = "Failed to update news article.";
+                // Save to database if no errors
+                if (!isset($error)) {
+                    if ($this->newsModel->update($id, $data)) {
+                        $_SESSION['success_message'] = "News article updated successfully!";
+                        $this->redirect('/admin/news-list');
+                    } else {
+                        $error = "Failed to update news article.";
+                    }
                 }
             }
         }
         
+        // Show form (GET request or error in POST)
+        $categoriesFromDB = $this->categoryModel->findAll();
         $this->view('admin/edit_news', [
-            'news' => $news, 
-            'error' => $error, 
-            'categories' => $categories,
-            'categoriesFromDB' => $categoriesFromDB
+            'news' => $news,
+            'categoriesFromDB' => $categoriesFromDB,
+            'error' => $error ?? null
         ]);
     }
     
@@ -156,98 +231,22 @@ class AdminController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['delete_id'] ?? null;
             if ($id && is_numeric($id)) {
-                $this->newsModel->delete($id);
+                // Get news info before deleting for image cleanup
+                $news = $this->newsModel->findById($id);
+                
+                if ($this->newsModel->delete($id)) {
+                    // FIXED: Delete associated image file with correct path
+                    if ($news && !empty($news['image']) && file_exists(dirname(APP_PATH) . '/' . $news['image'])) {
+                        unlink(dirname(APP_PATH) . '/' . $news['image']);
+                    }
+                    
+                    $_SESSION['success_message'] = 'News article deleted successfully!';
+                } else {
+                    $_SESSION['error_message'] = 'Failed to delete news article.';
+                }
             }
         }
         
-        $this->redirect('/admin/list-news');
-    }
-    
-    // Category Management Methods
-    private function handleAddCategory() {
-        $categoryName = trim($_POST['category_name']);
-        
-        if (empty($categoryName)) {
-            echo json_encode(['success' => false, 'message' => 'Category name is required']);
-            return;
-        }
-        
-        if ($this->categoryModel->categoryExists($categoryName)) {
-            echo json_encode(['success' => false, 'message' => 'Category already exists']);
-            return;
-        }
-        
-        if ($this->categoryModel->create($categoryName)) {
-            $categories = $this->categoryModel->getAllCategories();
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Category added successfully',
-                'categories' => $categories
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to add category']);
-        }
-    }
-    
-    private function handleEditCategory() {
-        $categoryId = (int)$_POST['category_id'];
-        $categoryName = trim($_POST['category_name']);
-        
-        if (empty($categoryName) || $categoryId <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Valid category ID and name are required']);
-            return;
-        }
-        
-        if ($this->categoryModel->categoryExistsExcluding($categoryName, $categoryId)) {
-            echo json_encode(['success' => false, 'message' => 'Category name already exists']);
-            return;
-        }
-        
-        if ($this->categoryModel->update($categoryId, $categoryName)) {
-            $categories = $this->categoryModel->getAllCategories();
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Category updated successfully',
-                'categories' => $categories
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to update category']);
-        }
-    }
-    
-    private function getCategoriesAjax() {
-        header('Content-Type: application/json');
-        
-        $categories = $this->categoryModel->getAllCategories();
-        echo json_encode(['success' => true, 'categories' => $categories]);
-    }
-    
-    private function handleImageUpload($file) {
-        $targetDir = ROOT_PATH . "/public/assets/news/";
-        
-        // Create uploads directory if it doesn't exist
-        if (!file_exists($targetDir)) {
-            mkdir($targetDir, 0755, true);
-        }
-        
-        $fileName = time() . '_' . basename($file['name']);
-        $targetFile = $targetDir . $fileName;
-        $imageExtension = strtolower(pathinfo($targetFile, PATHINFO_EXTENSION));
-        
-        $validExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-        
-        if (!in_array($imageExtension, $validExtensions)) {
-            return ['success' => false, 'error' => 'Only JPG, JPEG, PNG & GIF files are allowed.'];
-        }
-        
-        if ($file['size'] > 5000000) { // 5MB
-            return ['success' => false, 'error' => 'File is too large (max 5MB).'];
-        }
-        
-        if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-            return ['success' => true, 'path' => '/public/assets/news/' . $fileName];
-        } else {
-            return ['success' => false, 'error' => 'Failed to upload file.'];
-        }
+        $this->redirect('/admin/news-list');
     }
 }
