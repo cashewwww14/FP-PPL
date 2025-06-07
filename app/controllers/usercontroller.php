@@ -1,12 +1,15 @@
 <?php
 require_once APP_PATH . '/core/controller.php';
 require_once APP_PATH . '/models/user.php';
+require_once APP_PATH . '/models/interaction.php';
 
 class UserController extends Controller {
     private $userModel;
+    private $interactionModel;
     
     public function __construct() {
         $this->userModel = new User();
+        $this->interactionModel = new Interaction();
     }
     
     public function dashboard() {
@@ -25,7 +28,6 @@ class UserController extends Controller {
                 'email' => $_POST['email'] ?? '',
                 'birth_date' => $_POST['birth_date'] ?? '',
                 'gender' => $_POST['gender'] ?? ''
-
             ];
             
             // Validation
@@ -44,6 +46,12 @@ class UserController extends Controller {
             $this->redirect('/user/dashboard');
         }
         
-        $this->view('user/dashboard', ['user' => $user]);
+        // Get user's bookmarked articles
+        $bookmarked_news = $this->interactionModel->getUserBookmarks($user_id);
+        
+        $this->view('user/dashboard', [
+            'user' => $user,
+            'bookmarked_news' => $bookmarked_news
+        ]);
     }
 }
