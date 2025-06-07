@@ -69,3 +69,37 @@ class Router {
         </html>';
     }
 }
+
+// Setup Routes
+$router = new Router();
+
+// Home routes
+$router->add('/', 'NewsController', 'index');
+$router->add('/news/{id}', 'NewsController', 'detail');
+
+// Auth routes
+$router->add('/auth/login', 'AuthController', 'login');
+$router->add('/auth/login', 'AuthController', 'login', 'POST');
+$router->add('/auth/register', 'AuthController', 'register');
+$router->add('/auth/register', 'AuthController', 'register', 'POST');
+$router->add('/auth/logout', 'AuthController', 'logout');
+
+// User routes
+$router->add('/user/dashboard', 'UserController', 'dashboard');
+$router->add('/user/dashboard', 'UserController', 'dashboard', 'POST');
+
+// Admin routes
+$router->add('/admin', 'AdminController', 'dashboard');
+$router->add('/admin/dashboard', 'AdminController', 'dashboard');
+$router->add('/admin/news', 'AdminController', 'listNews');
+$router->add('/admin/news/add', 'AdminController', 'addNews');
+$router->add('/admin/news/add', 'AdminController', 'addNews', 'POST');
+$router->add('/admin/news/edit/{id}', 'AdminController', 'editNews');
+$router->add('/admin/news/edit/{id}', 'AdminController', 'editNews', 'POST');
+$router->add('/admin/news/delete/{id}', 'AdminController', 'deleteNews', 'POST');
+
+// NEW: Interaction routes
+$router->add('/interactions/toggle-like', 'InteractionController', 'toggleLike', 'POST');
+$router->add('/interactions/toggle-bookmark', 'InteractionController', 'toggleBookmark', 'POST');
+$router->add('/interactions/add-comment', 'InteractionController', 'addComment', 'POST');
+$router->add('/interactions/delete-comment', 'InteractionController', 'deleteComment', 'POST');
