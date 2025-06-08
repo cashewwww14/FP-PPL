@@ -27,6 +27,79 @@ require_once APP_PATH . '/views/layouts/navbar.php';
             </button>
         </form>
         
+        <!-- Advanced Search Toggle Button (positioned at bottom right) -->
+        <div class="flex justify-end mt-4">
+            <button 
+                type="button" 
+                id="advancedSearchToggle"
+                class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+            >
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                </svg>
+                <span id="advancedSearchText">Advanced Search</span>
+                <svg id="advancedSearchIcon" class="w-4 h-4 ml-1 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Advanced Search Panel (Initially Hidden) -->
+        <div id="advancedSearchPanel" class="hidden border-t border-gray-200 pt-4 mt-4">
+            <form action="/" method="GET" class="space-y-4">
+                <!-- Preserve existing search query -->
+                <?php if (!empty($search_query)): ?>
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($search_query) ?>">
+                <?php endif; ?>
+                
+                <!-- Preserve category filter -->
+                <?php if (isset($current_category) && $current_category): ?>
+                    <input type="hidden" name="category" value="<?= $current_category ?>">
+                <?php endif; ?>
+
+                <!-- Date Range Filter -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                        <input 
+                            type="date" 
+                            id="date_from"
+                            name="date_from" 
+                            value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    <div>
+                        <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                        <input 
+                            type="date" 
+                            id="date_to"
+                            name="date_to" 
+                            value="<?= htmlspecialchars($_GET['date_to'] ?? '') ?>"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                    <button 
+                        type="button" 
+                        id="clearAdvancedFilters"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                    >
+                        Clear Filters
+                    </button>
+                    <button 
+                        type="submit"
+                        class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                        Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+        
         <!-- Search Info -->
         <?php if (!empty($search_query)): ?>
             <div class="mt-3 text-sm text-gray-600">
@@ -36,7 +109,65 @@ require_once APP_PATH . '/views/layouts/navbar.php';
                 </a>
             </div>
         <?php endif; ?>
+
+        <!-- Active Filters Info -->
+        <?php if (!empty($_GET['date_from']) || !empty($_GET['date_to'])): ?>
+            <div class="mt-2 text-sm text-gray-600">
+                <span class="font-medium">Date filters:</span>
+                <?php if (!empty($_GET['date_from'])): ?>
+                    From <?= htmlspecialchars(date('M j, Y', strtotime($_GET['date_from']))) ?>
+                <?php endif; ?>
+                <?php if (!empty($_GET['date_to'])): ?>
+                    to <?= htmlspecialchars(date('M j, Y', strtotime($_GET['date_to']))) ?>
+                <?php endif; ?>
+                <a href="<?php 
+                    $clear_url_params = [];
+                    if (!empty($search_query)) $clear_url_params['search'] = $search_query;
+                    if ($current_category) $clear_url_params['category'] = $current_category;
+                    echo '/?' . http_build_query($clear_url_params);
+                ?>" class="ml-2 text-blue-600 hover:text-blue-800">
+                    Clear date filters
+                </a>
+            </div>
+        <?php endif; ?>
     </div>
+
+    <!-- JavaScript for Advanced Search Toggle -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.getElementById('advancedSearchToggle');
+        const panel = document.getElementById('advancedSearchPanel');
+        const toggleText = document.getElementById('advancedSearchText');
+        const toggleIcon = document.getElementById('advancedSearchIcon');
+        const clearButton = document.getElementById('clearAdvancedFilters');
+
+        toggleButton.addEventListener('click', function() {
+            const isHidden = panel.classList.contains('hidden');
+            
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                toggleText.textContent = 'Hide Advanced Search';
+                toggleIcon.style.transform = 'rotate(180deg)';
+            } else {
+                panel.classList.add('hidden');
+                toggleText.textContent = 'Advanced Search';
+                toggleIcon.style.transform = 'rotate(0deg)';
+            }
+        });
+
+        clearButton.addEventListener('click', function() {
+            document.getElementById('date_from').value = '';
+            document.getElementById('date_to').value = '';
+        });
+
+        // Auto-expand if there are active date filters
+        <?php if (!empty($_GET['date_from']) || !empty($_GET['date_to'])): ?>
+        panel.classList.remove('hidden');
+        toggleText.textContent = 'Hide Advanced Search';
+        toggleIcon.style.transform = 'rotate(180deg)';
+        <?php endif; ?>
+    });
+    </script>
 
     <!-- Category Filter -->
     <div class="mb-6">
