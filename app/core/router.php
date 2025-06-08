@@ -87,6 +87,7 @@ $router->add('/auth/logout', 'AuthController', 'logout');
 // User routes
 $router->add('/user/dashboard', 'UserController', 'dashboard');
 $router->add('/user/dashboard', 'UserController', 'dashboard', 'POST');
+$router->add('/user/remove-bookmark', 'UserController', 'removeBookmark', 'POST');
 
 // Admin routes
 $router->add('/admin', 'AdminController', 'dashboard');
@@ -98,7 +99,7 @@ $router->add('/admin/news/edit/{id}', 'AdminController', 'editNews');
 $router->add('/admin/news/edit/{id}', 'AdminController', 'editNews', 'POST');
 $router->add('/admin/news/delete/{id}', 'AdminController', 'deleteNews', 'POST');
 
-// NEW: Interaction routes
+// Interaction routes
 $router->add('/interactions/toggle-like', 'InteractionController', 'toggleLike', 'POST');
 $router->add('/interactions/toggle-bookmark', 'InteractionController', 'toggleBookmark', 'POST');
 $router->add('/interactions/add-comment', 'InteractionController', 'addComment', 'POST');
