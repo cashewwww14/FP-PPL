@@ -83,6 +83,9 @@ require_once APP_PATH . '/views/layouts/header.php';
         border-radius: 8px;
         backdrop-filter: blur(10px);
     }
+    .back-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    }
     .auth-footer {
         text-align: center;
         margin-top: 20px;
@@ -101,7 +104,7 @@ require_once APP_PATH . '/views/layouts/header.php';
     }
 </style>
 
-<a href="/" class="back-link">&larr; Back to Homepage</a>
+<a href="/" class="back-link">&lt;&nbsp;&nbsp;Back to Homepage</a>
 
 <div class="auth-container">
     <div class="auth-card">
