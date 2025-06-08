@@ -19,7 +19,7 @@ class AdminController extends Controller {
     public function dashboard() {
         $this->requireAdmin();
         
-        // Update: Dapatkan news dengan kategori
+        // Update: Dapatkan news dengan kategori dan created_by
         $latestNews = $this->newsModel->getLatestWithCategory(9);
         $this->view('admin/dashboard', ['latestNews' => $latestNews]);
     }
@@ -31,10 +31,12 @@ class AdminController extends Controller {
         // Get search and filter parameters
         $search = $_GET['search'] ?? '';
         $categoryId = $_GET['category'] ?? '';
+        $dateFrom = $_GET['date_from'] ?? '';
+        $dateTo = $_GET['date_to'] ?? '';
         
         // Fetch news based on filters
-        if (!empty($search) || !empty($categoryId)) {
-            $news = $this->newsModel->filterNews($categoryId, $search);
+        if (!empty($search) || !empty($categoryId) || !empty($dateFrom) || !empty($dateTo)) {
+            $news = $this->newsModel->filterNews($categoryId, $search, $dateFrom, $dateTo);
         } else {
             $news = $this->newsModel->findAllWithCategory();
         }
@@ -109,7 +111,8 @@ class AdminController extends Controller {
                         'content' => $content,
                         'category_id' => $category_id,
                         'release_date' => $release_date,
-                        'image' => $image_path
+                        'image' => $image_path,
+                        'created_by' => $_SESSION['user_id'] // NEW: Add created_by
                     ];
                     
                     if ($this->newsModel->create($data)) {
@@ -169,6 +172,7 @@ class AdminController extends Controller {
                     'content' => $content,
                     'category_id' => $category_id,
                     'release_date' => $release_date
+                    // NOTE: created_by tidak diubah saat edit
                 ];
                 
                 // Handle file upload if new image is provided
