@@ -3,17 +3,38 @@ $title = 'Add News - Admin Panel';
 require_once APP_PATH . '/views/layouts/header.php'; 
 ?>
 
-<header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+<style>
+    .custom-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .back-link {
+        color: white;
+        text-decoration: none;
+        padding: 10px 15px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        display: inline-flex;
+        align-items: center;
+    }
+    .back-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    }
+
+</style>
+
+<header class="custom-gradient text-white p-6 flex justify-between items-center">
     <div class="flex items-center">
-        <a href="/admin/dashboard" class="bg-white text-blue-600 px-4 py-2 rounded mr-4 hover:bg-gray-100 flex items-center">
+        <a href="/admin/dashboard" class="back-link flex items-center mr-4">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
-            Dashboard
+            Back to Dashboard
         </a>
         <h1 class="text-xl font-semibold">Add News Article</h1>
     </div>
 </header>
+
 
 <div class="container mx-auto p-6">
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
@@ -38,7 +59,7 @@ require_once APP_PATH . '/views/layouts/header.php';
                     <div class="flex space-x-2">
                         <select name="category_id" id="category_id" required 
                                 class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select Category</option>
+                            <option value=""disabled selected style="color: gray;">Select Category</option>
                             <?php foreach ($categories as $category): ?>
                                 <option value="<?= $category['id'] ?>" 
                                         <?= (isset($_POST['category_id']) && $_POST['category_id'] == $category['id']) ? 'selected' : '' ?>>
@@ -56,10 +77,13 @@ require_once APP_PATH . '/views/layouts/header.php';
                 </div>
                 
                 <div>
-                    <label for="release_date" class="block text-sm font-medium text-gray-700 mb-2">Release Date</label>
-                    <input type="date" name="release_date" id="release_date" required 
-                           value="<?= $_POST['release_date'] ?? date('Y-m-d') ?>"
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <label for="release_date" class="block text-sm font-medium text-gray-700 mb-2">
+                        Release Date & Time
+                    </label>
+                    <input type="datetime-local" name="release_date" id="release_date" required 
+                        value="<?= $_POST['release_date'] ?? '' ?>"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <p class="text-sm text-gray-500 mt-1">Set when this article should be published</p>
                 </div>
                 
                 <div class="md:col-span-2">
