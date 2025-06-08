@@ -23,7 +23,7 @@ class Interaction extends Model {
         $existing = $this->findUserInteraction($user_id, $news_id, 'bookmark');
         
         if ($existing) {
-            return $this->removeBookmark($user_id, $news_id);
+            return $this->removeBookmarkPrivate($user_id, $news_id);
         } else {
             return $this->addBookmark($user_id, $news_id);
         }
@@ -113,6 +113,18 @@ class Interaction extends Model {
         return $counts;
     }
     
+    // Public method untuk remove bookmark (untuk dashboard)
+    public function removeBookmark($user_id, $news_id) {
+        $stmt = $this->db->prepare("
+            DELETE FROM {$this->table} 
+            WHERE user_id = ? AND news_id = ? AND type = 'bookmark'
+        ");
+        $result = $stmt->execute([$user_id, $news_id]);
+        
+        // Return true if at least one row was affected (bookmark was deleted)
+        return $result && $stmt->rowCount() > 0;
+    }
+    
     // Private helper methods
     private function findUserInteraction($user_id, $news_id, $type) {
         $stmt = $this->db->prepare("
@@ -147,7 +159,8 @@ class Interaction extends Model {
         return $stmt->execute([$user_id, $news_id]);
     }
     
-    private function removeBookmark($user_id, $news_id) {
+    // Private method untuk toggle bookmark (beda nama dari public removeBookmark)
+    private function removeBookmarkPrivate($user_id, $news_id) {
         $stmt = $this->db->prepare("
             DELETE FROM {$this->table} 
             WHERE user_id = ? AND news_id = ? AND type = 'bookmark'
