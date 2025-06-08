@@ -21,8 +21,10 @@ class NewsController extends Controller {
     public function index() {
         $category = $_GET['category'] ?? null;
         $search = $_GET['search'] ?? null;
+        $dateFrom = $_GET['date_from'] ?? null;
+        $dateTo = $_GET['date_to'] ?? null;
         
-        $news = $this->newsModel->filterNews($category, $search);
+        $news = $this->newsModel->filterNews($category, $search, $dateFrom, $dateTo);
         $categories = $this->newsModel->getCategories();
         
         $user_name = '';
