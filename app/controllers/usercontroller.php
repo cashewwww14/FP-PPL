@@ -11,9 +11,15 @@ class UserController extends Controller {
         $this->userModel = new User();
         $this->interactionModel = new Interaction();
     }
-    
     public function dashboard() {
         $this->requireAuth();
+        
+        // BLOCK ADMIN FROM ACCESSING USER DASHBOARD
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+            $_SESSION['error'] = 'Admins cannot access user dashboard. Please use admin dashboard.';
+            $this->redirect('/admin/dashboard');
+            return;
+        }
         
         $user_id = $_SESSION['user_id'];
         $user = $this->userModel->findById($user_id);
@@ -53,5 +59,47 @@ class UserController extends Controller {
             'user' => $user,
             'bookmarked_news' => $bookmarked_news
         ]);
+    }
+    
+    // Remove bookmark method - ALSO BLOCK ADMIN
+    public function removeBookmark() {
+        header('Content-Type: application/json');
+        
+        if (!isset($_SESSION['user_id'])) {
+            echo json_encode(['success' => false, 'message' => 'Please login first']);
+            return;
+        }
+        
+        // BLOCK ADMIN FROM REMOVING BOOKMARKS
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+            echo json_encode(['success' => false, 'message' => 'Admins cannot manage bookmarks']);
+            return;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            return;
+        }
+        
+        $news_id = $_POST['news_id'] ?? null;
+        
+        if (!$news_id || !is_numeric($news_id)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid news ID']);
+            return;
+        }
+        
+        $user_id = $_SESSION['user_id'];
+        
+        // Direct remove bookmark from database
+        $result = $this->interactionModel->removeBookmark($user_id, $news_id);
+        
+        if ($result) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Bookmark removed successfully'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to remove bookmark or bookmark not found']);
+        }
     }
 }
