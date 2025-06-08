@@ -59,6 +59,12 @@ class InteractionController extends Controller {
             return;
         }
         
+        // BLOCK ADMIN FROM BOOKMARKING
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+            echo json_encode(['success' => false, 'message' => 'Admins cannot bookmark articles']);
+            return;
+        }
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false, 'message' => 'Invalid request method']);
             return;
@@ -87,7 +93,7 @@ class InteractionController extends Controller {
             echo json_encode(['success' => false, 'message' => 'Failed to update bookmark']);
         }
     }
-    
+
     // Add comment (Form submission atau AJAX)
     public function addComment() {
         if (!isset($_SESSION['user_id'])) {
