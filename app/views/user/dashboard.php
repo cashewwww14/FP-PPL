@@ -18,7 +18,7 @@ require_once APP_PATH . '/views/layouts/header.php';
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>
-                Back to Home
+                Back to Homepage
             </a>
             <a href="/auth/logout" class="text-red-600 hover:text-red-800 ml-auto flex items-center">
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,12 +126,14 @@ require_once APP_PATH . '/views/layouts/header.php';
                     <?php else: ?>
                         <div class="space-y-4">
                             <?php foreach ($bookmarked_news as $article): ?>
-                                <div class="flex bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                                <div class="flex bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors" id="bookmark-<?= $article['id'] ?>">
                                     <!-- Article Image -->
-                                    <img src="/<?= htmlspecialchars($article['image']) ?>" 
-                                         alt="<?= htmlspecialchars($article['title']) ?>" 
-                                         class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
-                                    
+                                    <div class="aspect-[3/4] md:aspect-auto w-24 h-auto flex-shrink-0 relative">
+                                        <img src="/<?= htmlspecialchars($article['image']) ?>" 
+                                            alt="<?= htmlspecialchars($article['title']) ?>" 
+                                            class="absolute inset-0 w-full h-full object-cover rounded-lg">
+                                    </div>
+        
                                     <!-- Article Info -->
                                     <div class="ml-4 flex-1 min-w-0">
                                         <div class="flex items-center mb-2">
@@ -153,11 +155,7 @@ require_once APP_PATH . '/views/layouts/header.php';
                                             <?= htmlspecialchars(substr($article['content'], 0, 120)) ?>...
                                         </p>
                                         
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-gray-500 text-sm">
-                                                Published <?= date('M j, Y', strtotime($article['release_date'])) ?>
-                                            </span>
-                                            
+                                        <div class="flex justify-end">
                                             <div class="flex space-x-2">
                                                 <a href="/news/<?= $article['id'] ?>" 
                                                    class="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -187,7 +185,7 @@ function removeBookmark(newsId) {
         return;
     }
     
-    fetch('/public/assets/interactions/toggle-bookmark', {
+    fetch('/interactions/toggle-bookmark', {  // Fixed: Added 's' to interactions
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -197,8 +195,24 @@ function removeBookmark(newsId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Reload page to update bookmarks list
-            location.reload();
+            // Remove the bookmark item from DOM instead of reloading
+            const bookmarkElement = document.getElementById(`bookmark-${newsId}`);
+            if (bookmarkElement) {
+                bookmarkElement.remove();
+                
+                // Update bookmark count
+                const countElement = document.querySelector('.bg-blue-100.text-blue-800');
+                if (countElement) {
+                    const currentCount = parseInt(countElement.textContent.match(/\d+/)[0]);
+                    countElement.textContent = `${currentCount - 1} articles`;
+                }
+                
+                // Show empty state if no bookmarks left
+                const bookmarksContainer = document.querySelector('.space-y-4');
+                if (bookmarksContainer && bookmarksContainer.children.length === 0) {
+                    location.reload(); // Reload to show empty state
+                }
+            }
         } else {
             alert(data.message || 'Failed to remove bookmark');
         }
