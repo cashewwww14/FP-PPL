@@ -101,7 +101,7 @@ require_once APP_PATH . '/views/layouts/header.php';
     }
 </style>
 
-<a href="/" class="back-link">&larr; Back to Homepage</a>
+<a href="/" class="back-link">&lt;&nbsp;&nbsp;Back to Homepage</a>
 
 <div class="auth-container">
     <div class="auth-card">
@@ -128,7 +128,7 @@ require_once APP_PATH . '/views/layouts/header.php';
             <div class="form-group">
                 <label for="gender">Gender</label>
                 <select name="gender" id="gender" required>
-                    <option value="">Select Gender</option>
+                    <option value="" disabled selected style="color: gray;">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                 </select>
