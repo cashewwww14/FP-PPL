@@ -6,6 +6,7 @@ $news_id = $news_id ?? 0;
 $counts = $counts ?? ['likes' => 0, 'comments' => 0, 'bookmarks' => 0];
 $user_status = $user_status ?? ['liked' => false, 'bookmarked' => false];
 $is_logged_in = isset($_SESSION['user_id']);
+$is_admin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 ?>
 
 <div class="flex items-center space-x-4 pt-4 border-t">
@@ -30,17 +31,28 @@ $is_logged_in = isset($_SESSION['user_id']);
         <span class="text-sm">Comments</span>
     </div>
     
-    <!-- Bookmark Button -->
-    <button 
-        onclick="toggleBookmark(<?= $news_id ?>)" 
-        class="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors <?= $user_status['bookmarked'] ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' ?>"
-        <?= !$is_logged_in ? 'title="Please login to bookmark"' : '' ?>
-        id="bookmark-btn-<?= $news_id ?>">
-        <svg class="w-5 h-5" fill="<?= $user_status['bookmarked'] ? 'currentColor' : 'none' ?>" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
-        </svg>
-        <span id="bookmark-count-<?= $news_id ?>"><?= $counts['bookmarks'] ?></span>
-    </button>
+    <!-- Bookmark Button - Hidden for Admin -->
+    <?php if (!$is_admin): ?>
+        <button 
+            onclick="toggleBookmark(<?= $news_id ?>)" 
+            class="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors <?= $user_status['bookmarked'] ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' ?>"
+            <?= !$is_logged_in ? 'title="Please login to bookmark"' : '' ?>
+            id="bookmark-btn-<?= $news_id ?>">
+            <svg class="w-5 h-5" fill="<?= $user_status['bookmarked'] ? 'currentColor' : 'none' ?>" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+            </svg>
+            <span id="bookmark-count-<?= $news_id ?>"><?= $counts['bookmarks'] ?></span>
+        </button>
+    <?php else: ?>
+        <!-- Admin Info: Bookmark not available -->
+        <div class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg text-gray-500" title="Admins cannot bookmark articles">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+            </svg>
+            <span><?= $counts['bookmarks'] ?></span>
+            <span class="text-xs opacity-75">(Admin)</span>
+        </div>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -127,7 +139,8 @@ function toggleLike(newsId) {
     });
 }
 
-// Bookmark functionality
+// Bookmark functionality - Only available for non-admin users
+<?php if (!$is_admin): ?>
 function toggleBookmark(newsId) {
     <?php if (!$is_logged_in): ?>
         alert('Please login to bookmark articles');
@@ -187,4 +200,10 @@ function toggleBookmark(newsId) {
         btn.disabled = false;
     });
 }
+<?php else: ?>
+// Admin users cannot bookmark - function disabled
+function toggleBookmark(newsId) {
+    alert('Admins cannot bookmark articles');
+}
+<?php endif; ?>
 </script>
